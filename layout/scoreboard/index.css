@@ -90,6 +90,10 @@ body {
   top: 60px;
 }
 
+.fgc.thin.dbfz .player.container {
+  height: 34px;
+}
+
 .sf6 .player.container {
   top: 10px;
   height: 48px;
@@ -328,6 +332,7 @@ body {
   background-position: center;
   border-radius: var(--border-radius);
   z-index: 9;
+  opacity: 0.5;
 }
 
 .fgc .logo {
@@ -348,6 +353,10 @@ body {
 
 .fgc.thin.bblue .logo {
   top: 970px;
+}
+
+.fgc.thin.dbfz .logo {
+  top: 870px;
 }
 
 .sf6 .logo {
@@ -413,6 +422,10 @@ body {
   height: 48px;
 }
 
+.fgc.thin.dbfz .info.container.top {
+  height: 34px;
+}
+
 .sf6 .info.container.top {
   width: 440px;
   top: 0;
@@ -432,6 +445,11 @@ body {
   height: 64px;
   font-size: 20px;
   padding: 4px 16px;
+}
+
+.fgc.thin.dbfz .info.container.bottom {
+  top: 120px;
+  height: 48px;
 }
 
 .phase {
