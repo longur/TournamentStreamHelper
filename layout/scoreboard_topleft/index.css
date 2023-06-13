@@ -68,6 +68,11 @@ body {
   height: 100%;
 }
 
+.vsb .base_container_outer {
+  left: 1370px;
+  top: 10px;
+}
+
 .base_container {
   position: absolute;
   color: var(--text-color);
@@ -127,6 +132,11 @@ body {
 
 .name_twitter .twitter {
   font-size: 14px;
+}
+
+.vsb .name_twitter .twitter {
+  font-size: 14px;
+  max-width: 100%;
 }
 
 .twitter_logo {
