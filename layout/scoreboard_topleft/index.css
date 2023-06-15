@@ -83,7 +83,7 @@ body {
   border-radius: var(--border-radius);
   align-items: center;
   width: 540px;
-  gap: 2px;
+  gap: 0px;
 }
 
 .base_container .line {
