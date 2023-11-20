@@ -1,11 +1,12 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5 import uic
+from qtpy.QtGui import *
+from qtpy.QtWidgets import *
+from qtpy.QtCore import *
+from qtpy import uic
 import json
 from .TSHBracket import *
 from .TSHPlayerList import *
 import traceback
+from loguru import logger
 
 # Checks if a number is power of 2
 def is_power_of_two(n):
@@ -46,7 +47,7 @@ class BracketSetWidget(QWidget):
             name.setDisabled(True)
             self.name.append(name)
             hbox.layout().addWidget(name)
-            name.sizePolicy().setRetainSizeWhenHidden(True)
+            name.sizePolicy().setRetainSizeWhenHidden(False)
 
             score = QSpinBox()
             score.setMinimum(-1)
@@ -63,7 +64,17 @@ class BracketSetWidget(QWidget):
         self.sizePolicy().setRetainSizeWhenHidden(True)
         self.layout().setSpacing(2)
 
-        self.Update()
+        if self.bracketSet is not None:
+            hasBye = \
+                ((self.bracketSet.playerIds[0] == -1 and not self.bracketSet.playerIds[1] == -1) or
+                 (self.bracketSet.playerIds[1] == -1 and not self.bracketSet.playerIds[0] == -1))
+
+            if self.bracketSet.pos[0] < 0 and hasBye:
+                self.hide()
+            elif self.bracketSet.pos[0] > 0 and self.bracketSet.pos[0] == 1 and hasBye:
+                self.hide()
+            else:
+                self.show()
     
     def SetScore(self, id, score, updateDisplay=True):
         self.bracketSet.score[id] = score
@@ -116,7 +127,7 @@ class BracketSetWidget(QWidget):
                 else:
                     self.name[0].setText("")
             except:
-                print(traceback.format_exc())
+                logger.error(traceback.format_exc())
 
             try:
                 if (self.bracketSet.playerIds[1]-1) < len(self.bracketView.playerList.slotWidgets) and self.bracketSet.playerIds[1] > 0:
@@ -129,7 +140,7 @@ class BracketSetWidget(QWidget):
                 else:
                     self.name[1].setText("")
             except:
-                print(traceback.format_exc())
+                logger.error(traceback.format_exc())
 
             if self.bracketSet.finished is not None:
                 self.finished.blockSignals(True)
@@ -338,7 +349,7 @@ class TSHBracketView(QGraphicsView):
             try:
                 losersRounds = int(math.log2(limitExportNumber)) + int(math.log2((limitExportNumber-1)/2)) + 2
             except:
-                print(traceback.format_exc())
+                logger.error(traceback.format_exc())
                 losersRounds = 0
 
             if self.bracketWidget.progressionsIn.value() > 0:
@@ -620,7 +631,7 @@ class TSHBracketView(QGraphicsView):
                             ])
                         )
                 except:
-                    print(traceback.format_exc())
+                    logger.error(traceback.format_exc())
         
         pen = QPen(Qt.gray, 4, Qt.SolidLine)
         pen2 = QPen(Qt.black, 6, Qt.SolidLine)

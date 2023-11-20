@@ -45,15 +45,87 @@ async function UpdateData() {
   try {
     oldData = data;
     data = await getData();
+
+    if(data.timestamp <= oldData.timestamp){
+      return
+    }
+
     let event = new CustomEvent("tsh_update");
     event.data = data;
     event.oldData = oldData;
 
-    if (JSON.stringify(data) != JSON.stringify(oldData)) {
+    console.log(data);
+    document.dispatchEvent(event);
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+// Gets current program state using SocketIO,
+// Dispatch "tsh_update" event if data has changed
+// This function is called in a high frequency.
+// Similar to UpdateData() except for SocketIO support
+// which requires being on HTTP/HTTPS
+async function UpdateData_SocketIO() {
+  try {
+    // Connect to Socket.io. Valid: websocket, webtransport, polling
+    // Python threading with Qt is weird so put in polling method if
+    // really absolutely necessary.
+    const socket = io(window.location.protocol + '//' + window.location.host + '/', {
+      transports: ['websocket', 'webtransport'],
+      timeout: 500,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 1500
+    });
+
+    socket.on('connect', () => {
+      console.log('socket.io connected');
+    });
+
+    socket.on('disconnect', () => {
+      // call program_state.json initially in case it's a
+      // websocket issue and not with web server being gone
+      // e.g. TSH being closed
+      console.log('socket.io disconnected');
+      UpdateData();
+    });
+
+    socket.io.on('reconnect', () => {
+      console.log('socket.io reconnected');
+    });
+
+    socket.io.on('reconnect_attempt', (attempt_number) => {
+      // every 1-2 seconds, it will attempt to reconnect to
+      // the websocket. before that happens, call UpdateData
+      // in case it's an issue with the websocket and not
+      // with the web server being gone
+      UpdateData();
+    });
+
+    socket.io.on('reconnect_failed', () => {
+      // reconnect_failed, if max retries are reached,
+      // will fall back to file loading program_state.json
+      setInterval(async () => {
+        await UpdateData();
+      }, 64);
+    });
+
+    socket.on('error', (err) => {
+      console.log(err);
+    });
+
+    socket.on('program_state', (newData) => {
+      oldData = data;
+      data = newData;
+
+      let event = new CustomEvent("tsh_update");
+      event.data = data;
+      event.oldData = oldData;
+
       console.log(data);
       document.dispatchEvent(event);
-    }
-  } catch (e) {
+    });
+  } catch(e) {
     console.log(e);
   }
 }
@@ -72,6 +144,7 @@ async function LoadEverything() {
     "jquery.waitforimages.min.js",
     "color-thief.min.js",
     "assetUtils.js",
+    "socket.io.min.js",
   ];
 
   for (let i = 0; i < scripts.length; i += 1) {
@@ -107,9 +180,16 @@ async function InitAll() {
 
   await LoadKuroshiro();
 
-  setInterval(async () => {
+  if(window.location.protocol === 'file:' || window.location.host === 'absolute') {
+    setInterval(async () => {
+      await UpdateData();
+    }, 64);
+  } else {
+    // Call program_state.json load just in case it takes
+    // a bit to start the websocket
     await UpdateData();
-  }, 64);
+    await UpdateData_SocketIO();
+  }
 
   console.log("== Init complete ==");
   document.dispatchEvent(new CustomEvent("tsh_init"));
@@ -281,10 +361,12 @@ async function SetInnerHtml(element, html, settings = {}) {
     ) {
       const callback = () => {
         element.find(".text").html(html);
-        if (html.length == 0) {
+        if (html.trim().length == 0) {
           element.find(".text").addClass("text_empty");
+          element.addClass("text_empty");
         } else {
           element.find(".text").removeClass("text_empty");
+          element.removeClass("text_empty");
         }
         FitText(element);
         if (middleFunction != undefined) {
@@ -686,4 +768,24 @@ function nextPow2(v) {
     p <<= 1;
   }
   return p;
+}
+
+/**
+ * Stores content to be added to the DOM with SetInnerHtml later
+ */
+class ContentResolver {
+  constructor () {
+      this.list = [];
+  }
+
+  add(selector, value){
+      this.list.push({s: selector, v: value});
+      return ""
+  }
+
+  resolve(){
+      for (let element of this.list){
+          SetInnerHtml($(element.s), element.v);
+      }
+  }
 }

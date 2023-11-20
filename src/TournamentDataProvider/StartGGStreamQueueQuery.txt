@@ -1,12 +1,20 @@
 query StreamQueueQuery($slug: String) {
     event(slug: $slug){
+        slug
         tournament {
             streamQueue {
                 sets {
                     id
                     identifier
                     fullRoundText
+                    totalGames
                     state
+                    station {
+                      number
+                    }
+                    event {
+                        slug
+                    }
                     slots {
                         entrant {
                             id
@@ -28,6 +36,10 @@ query StreamQueueQuery($slug: String) {
                                     }
                                     images(type: "profile") {
                                         url
+                                    }
+                                    authorizations(types: [TWITTER]) {
+                                        type
+                                        externalUsername
                                     }
                                 }
                                 player {

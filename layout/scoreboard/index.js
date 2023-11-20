@@ -1,4 +1,7 @@
 LoadEverything().then(() => {
+
+  let scoreboardNumber = 1;
+  
   gsap.config({ nullTargetWarn: false, trialWarn: false });
 
   let startingAnimation = gsap
@@ -58,12 +61,12 @@ LoadEverything().then(() => {
     let data = event.data;
     let oldData = event.oldData;
 
-    let isTeams = Object.keys(data.score.team["1"].player).length > 1;
+    let isTeams = Object.keys(data.score[scoreboardNumber].team["1"].player).length > 1;
 
     if (!isTeams) {
       for (const [t, team] of [
-        data.score.team["1"],
-        data.score.team["2"],
+        data.score[scoreboardNumber].team["1"],
+        data.score[scoreboardNumber].team["2"],
       ].entries()) {
         for (const [p, player] of [team.player["1"]].entries()) {
           if (player) {
@@ -96,7 +99,7 @@ LoadEverything().then(() => {
               $(`.p${t + 1}.container .character_container`),
               {
                 asset_key: "base_files/icon",
-                source: `score.team.${t + 1}`,
+                source: `score.${scoreboardNumber}.team.${t + 1}`,
               },
               event
             );
@@ -145,13 +148,24 @@ LoadEverything().then(() => {
               $(`.p${t + 1}.container .sponsor-container`),
               `<div class='sponsor-logo' style='background-image: url(../../${player.sponsor_logo})'></div>`
             );
+
+            if ($(".sf6.online").length > 0) {
+              console.log("hi");
+              console.log(player.twitter);
+              console.log(player.pronoun);
+              if (!player.twitter && !player.pronoun) {
+                gsap.to($(`.p${t + 1}.chips`), { autoAlpha: 0 });
+              } else {
+                gsap.to($(`.p${t + 1}.chips`), { autoAlpha: 1 });
+              }
+            }
           }
         }
       }
     } else {
       for (const [t, team] of [
-        data.score.team["1"],
-        data.score.team["2"],
+        data.score[scoreboardNumber].team["1"],
+        data.score[scoreboardNumber].team["2"],
       ].entries()) {
         let teamName = "";
 
@@ -183,7 +197,7 @@ LoadEverything().then(() => {
           $(`.p${t + 1}.container .character_container`),
           {
             asset_key: "base_files/icon",
-            source: `score.team.${t + 1}`,
+            source: `score.${scoreboardNumber}.team.${t + 1}`,
             slice_character: [0, 1],
           },
           event
@@ -205,11 +219,11 @@ LoadEverything().then(() => {
 
     SetInnerHtml($(".tournament_name"), data.tournamentInfo.tournamentName);
 
-    SetInnerHtml($(".match"), data.score.match);
+    SetInnerHtml($(".match"), data.score[scoreboardNumber].match);
 
     let phaseTexts = [];
-    if (data.score.phase) phaseTexts.push(data.score.phase);
-    if (data.score.best_of_text) phaseTexts.push(data.score.best_of_text);
+    if (data.score[scoreboardNumber].phase) phaseTexts.push(data.score[scoreboardNumber].phase);
+    if (data.score[scoreboardNumber].best_of_text) phaseTexts.push(data.score[scoreboardNumber].best_of_text);
 
     SetInnerHtml($(".phase"), phaseTexts.join(" - "));
   };

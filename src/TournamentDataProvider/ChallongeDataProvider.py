@@ -2,24 +2,25 @@ import requests
 import os
 import traceback
 import re
-import json
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+import orjson
+from qtpy.QtGui import *
+from qtpy.QtWidgets import *
+from qtpy.QtCore import *
 from datetime import datetime
 from dateutil.parser import parse
 from ..Helpers.TSHDictHelper import deep_get
 from ..TSHGameAssetManager import TSHGameAssetManager
 from ..TSHPlayerDB import TSHPlayerDB
 from .TournamentDataProvider import TournamentDataProvider
-from PyQt5.QtCore import *
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
+from qtpy.QtCore import *
+from qtpy.QtGui import QStandardItem, QStandardItemModel
 from ..Workers import Worker
 from ..Helpers.TSHLocaleHelper import TSHLocaleHelper
 from ..TSHBracket import next_power_of_2
 import math
 import random
 import cloudscraper
+from loguru import logger
 
 HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -49,7 +50,7 @@ class ChallongeDataProvider(TournamentDataProvider):
         i, initialized = 0, False
         while not initialized and i < max_iter:
             if i > 0:
-                print(f"Retrying Cloudfare initialization (Attempt #{i+1})")
+                logger.info(f"Retrying Cloudfare initialization (Attempt #{i+1})")
             try:
                 self.scraper = cloudscraper.create_scraper(browser={
                     'browser': 'firefox',
@@ -100,7 +101,7 @@ class ChallongeDataProvider(TournamentDataProvider):
 
             )
 
-            data = json.loads(data.text)
+            data = orjson.loads(data.text)
             collection = deep_get(data, "collection", [{}])[0]
             details = deep_get(collection, "details", [])
 
@@ -123,7 +124,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                     timestamp = datetime.timestamp(element)
                     finalData["startAt"] = datetime.timestamp(element)
                 except ValueError:
-                    print('ChallongeDataProvider: No date defined')
+                    logger.error('ChallongeDataProvider: No date defined')
 
             details = collection.get("details", [])
             participantsElement = next(
@@ -135,7 +136,7 @@ class ChallongeDataProvider(TournamentDataProvider):
             # finalData["address"] = deep_get(
             #     data, "data.event.tournament.venueAddress", "")
         except:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
         return finalData
 
@@ -150,7 +151,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                 headers=HEADERS
             )
 
-            data = json.loads(data.text)
+            data = orjson.loads(data.text)
             collection = deep_get(data, "collection", [{}])[0]
 
             url = collection.get("organizer")
@@ -158,7 +159,7 @@ class ChallongeDataProvider(TournamentDataProvider):
             if url.startswith("//"):
                 url = "https:" + url
         except:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
         return url
 
@@ -170,7 +171,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                 self.GetEnglishUrl()+".json",
                 headers=HEADERS
             )
-            data = json.loads(data.text)
+            data = orjson.loads(data.text)
 
             all_matches = self.GetAllMatchesFromData(data)
 
@@ -180,7 +181,7 @@ class ChallongeDataProvider(TournamentDataProvider):
             if match:
                 finalData = self.ParseMatchData(match)
         except:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
         return finalData
 
@@ -193,9 +194,9 @@ class ChallongeDataProvider(TournamentDataProvider):
                 headers=HEADERS,
                 allow_redirects=True
             )
-            print(self.GetEnglishUrl()+".json")
-            print(data.text)
-            data = json.loads(data.text)
+            logger.info(self.GetEnglishUrl()+".json")
+            logger.info(str(data.text))
+            data = orjson.loads(data.text)
 
             all_matches = self.GetAllMatchesFromData(data)
 
@@ -212,7 +213,7 @@ class ChallongeDataProvider(TournamentDataProvider):
 
             final_data.reverse()
         except Exception as e:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
         return final_data
 
@@ -224,7 +225,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                 self.GetEnglishUrl()+".json",
                 headers=HEADERS
             )
-            data = json.loads(data.text)
+            data = orjson.loads(data.text)
 
             if len(deep_get(data, "groups", [])) > 0:
                 phaseObj = {
@@ -254,7 +255,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                 ]
             })
         except:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
         return phases
 
@@ -265,7 +266,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                 self.GetEnglishUrl()+".json",
                 headers=HEADERS
             )
-            data = json.loads(data.text)
+            data = orjson.loads(data.text)
 
             entrants = self.GetAllEntrantsFromData(data, id)
             entrants.sort(key=lambda e: e.get("seed"))
@@ -436,7 +437,7 @@ class ChallongeDataProvider(TournamentDataProvider):
             losersRoundKeys.sort(key=lambda x: int(x), reverse=False)
 
             if len(losersRoundKeys) % 2 == 1:
-                print(lr1ReverseMap)
+                logger.info(str(lr1ReverseMap))
 
                 for i, s in enumerate(rounds[int(losersRoundKeys[-2])]):
                     if len(lr1ReverseMap) > i and lr1ReverseMap[i] == True:
@@ -472,7 +473,7 @@ class ChallongeDataProvider(TournamentDataProvider):
 
             finalData["sets"] = rounds
         except:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
         return finalData
 
@@ -661,7 +662,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                 self.GetEnglishUrl()+".json",
                 headers=HEADERS
             )
-            data = json.loads(data.text)
+            data = orjson.loads(data.text)
 
             entrants = self.GetAllEntrantsFromData(data)
             players = []
@@ -672,7 +673,7 @@ class ChallongeDataProvider(TournamentDataProvider):
 
             TSHPlayerDB.AddPlayers(players)
         except Exception as e:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
     def ParseEntrant(self, data):
         # Here we're only supporting a single player per entrant
@@ -728,7 +729,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                 headers=HEADERS
             )
 
-            data = json.loads(data.text)
+            data = orjson.loads(data.text)
 
             all_matches = self.GetAllMatchesFromData(data)
 
@@ -763,7 +764,7 @@ class ChallongeDataProvider(TournamentDataProvider):
 
             return final_data
         except Exception as e:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
 
     def GetLastSets(self, playerID, playerNumber, callback, progress_callback):
         try:
@@ -772,7 +773,7 @@ class ChallongeDataProvider(TournamentDataProvider):
                 headers=HEADERS
             )
 
-            data = json.loads(data.text)
+            data = orjson.loads(data.text)
 
             set_data = []
 
@@ -817,5 +818,5 @@ class ChallongeDataProvider(TournamentDataProvider):
             callback.emit(
                 {"playerNumber": playerNumber, "last_sets": set_data})
         except Exception as e:
-            traceback.print_exc()
+            logger.error(traceback.format_exc())
             callback.emit({"playerNumber": playerNumber, "last_sets": []})
